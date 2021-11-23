@@ -1,6 +1,7 @@
-use actix_web::{self, web, App, HttpRequest, HttpResponse, HttpServer, Responder, Result};
-use repositories::{MemoryRepository, Repository};
-use std::str::FromStr;
+use actix_web::{self, App, HttpRequest, HttpResponse, HttpServer, Responder, Result, web::{self, Data}};
+use repositories::{MemoryRepository, Repository, RepositoryInjector};
+use core::panic;
+use std::{str::FromStr, sync::Arc};
 mod handlers;
 mod models;
 mod repositories;
@@ -17,17 +18,28 @@ async fn main() -> std::io::Result<()> {
     let port = std::env::var("PORT").unwrap_or("8080".to_string());
     let address = format!("127.0.0.1:{}", port);
     println!("Starting our server");
-    HttpServer::new(|| {
+    let repo = MemoryRepository::default();
+    let repo = RepositoryInjector::new_shared(repo);
+    HttpServer::new(move || {
         println!("Starting our thread");
         App::new()
+            .data(repo.clone())
+            .route("/", web::get().to(hola_rust))
             .service(web::resource("/user/{userId}").route(web::get().to(get_user)))
             .route("/health", web::get().to(|| HttpResponse::Ok()))
             .route("/{name}", web::get().to(greet))
     })
-    .bind("127.0.0.1:8080")?
+    .bind(&address)
+    .unwrap_or_else(|err| {
+        panic!("Could not initialize app on port {}: {:?}", port, err)
+    })
     .workers(2)
     .run()
     .await
+}
+
+async fn hola_rust(req: HttpRequest, repo: Data<Arc<dyn Repository>>) -> impl Responder {
+    format!("Hola Rust")
 }
 
 // fn get_user(req: HttpRequest) -> HttpResponse {
@@ -47,9 +59,8 @@ async fn main() -> std::io::Result<()> {
 //     }
 // }
 
-fn get_user(user_id: web::Path<String>) -> HttpResponse {
+fn get_user(user_id: web::Path<String>, repo: Data<Arc<RepositoryInjector>>) -> HttpResponse {
     if let Ok(parsed_user_id) =uuid::Uuid::from_str(&user_id) {
-        let repo = MemoryRepository::default();
         match repo.get_users(&parsed_user_id) {
             Ok(user) => HttpResponse::Ok().json(user),
             Err(_) => HttpResponse::NotFound().body("Not found")

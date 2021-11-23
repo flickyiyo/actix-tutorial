@@ -17,7 +17,7 @@ impl Repository for MemoryRepository {
         self.users
             .iter()
             .find(|u| &u.id == user_id)
-            .map(|u| u.clone())
+            .cloned()
             .ok_or_else(|| "User Not Found".to_string())
     }
 }
