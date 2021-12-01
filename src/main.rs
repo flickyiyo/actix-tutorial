@@ -13,7 +13,7 @@ async fn greet(req: HttpRequest) -> impl Responder {
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    // std::env::set_var("RUST_LOG", "actix_web=debug");
+    std::env::set_var("RUST_LOG", "actix_web=debug");
     dotenv::dotenv().ok();
     let port = std::env::var("PORT").unwrap_or("8080".to_string());
     let address = format!("127.0.0.1:{}", port);
