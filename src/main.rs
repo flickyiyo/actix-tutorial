@@ -5,6 +5,7 @@ use std::{str::FromStr, sync::Arc};
 mod handlers;
 mod models;
 mod repositories;
+mod v1;
 
 async fn greet(req: HttpRequest) -> impl Responder {
     let name = req.match_info().get("name").unwrap_or("mundo");
